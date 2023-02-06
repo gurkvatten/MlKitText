@@ -167,6 +167,7 @@ class MainActivity : AppCompatActivity() {
 
         val intent = Intent(Intent.ACTION_PICK)
         intent.type = "image/*"
+        galleryActivityResultLauncher.launch(intent)
     }
 
     private val  galleryActivityResultLauncher =
