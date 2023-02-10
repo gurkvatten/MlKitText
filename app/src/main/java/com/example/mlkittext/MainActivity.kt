@@ -1,29 +1,33 @@
 package com.example.mlkittext
 
 import android.app.Activity
-import android.app.Dialog
 import android.app.ProgressDialog
 import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.net.Uri
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.provider.MediaStore
+import android.util.Log
 import android.view.Menu
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.PopupMenu
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.canhub.cropper.CropImageContract
+import com.canhub.cropper.CropImageView
 import com.google.android.material.button.MaterialButton
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.TextRecognizer
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
-import java.util.jar.Manifest
+import java.io.FileOutputStream
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -32,20 +36,21 @@ class MainActivity : AppCompatActivity() {
     private lateinit var imageIv: ImageView
     private lateinit var recognizedTextEt: EditText
 
+
     private companion object{
         private const val CAMERA_REQUEST_CODE =100
         private const val STORAGE_REQUEST_CODE =101
     }
 
-
+    // Uri of the image from  camera/gallery
     private var imageUri: Uri? = null
 
-
+    // arrays of the permissions
     private lateinit var cameraPermissions: Array<String>
     private lateinit var storagePermissions: Array<String>
-
+    // progress dialog
     private lateinit var progressDialog: ProgressDialog
-
+    //Textrecog
     private lateinit var textRecognizer: TextRecognizer
 
 
@@ -61,23 +66,24 @@ class MainActivity : AppCompatActivity() {
         recognizeTextBtn = findViewById(R.id.recognizeTextBtn)
         imageIv = findViewById(R.id.imageIv)
         recognizedTextEt = findViewById(R.id.recognizeTextEt)
-
+        // init the arrays of permissions
         cameraPermissions = arrayOf(android.Manifest.permission.CAMERA, android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
         storagePermissions = arrayOf(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
-
+        // init progress dialog
         progressDialog = ProgressDialog(this)
         progressDialog.setTitle("Please wait")
         progressDialog.setCanceledOnTouchOutside(false)
-
+        // init textrecog
         textRecognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
 
         //handle click show input image dialog
         inputImageBtn.setOnClickListener{
             showInputImageDialog()
         }
-
+        //handle click, start recognizing text fronm image we took
         recognizeTextBtn.setOnClickListener {
             if (imageUri == null){
+                //imageUri is null, we havent picked an image yet
                 showToast("Pick image First...")
             }
             else{
@@ -88,27 +94,28 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun recognizeTextfromImage() {
+        // set message and show progress dialog
         progressDialog.setMessage("Preparing Image...")
         progressDialog.show()
 
         try {
-
+            // prepare InputImage frum image uri
             val inputImage = InputImage.fromFilePath(this,imageUri!!)
-
-            progressDialog.setMessage("Working...")
+            //image prepared starting the recognizing process
+            progressDialog.setMessage("Working on it...")
 
             val textTaskResult = textRecognizer.process(inputImage)
                 .addOnSuccessListener { text ->
 
                     progressDialog.dismiss()
-
+                    // get the recognized text
                     val recognizedText = text.text
-
+                    // sets the recognized text to edit text
                     recognizedTextEt.setText(recognizedText)
 
                 }
                 .addOnFailureListener { e->
-
+                    // failed recognizing show reason in toast
                     progressDialog.dismiss()
                     showToast("Failed due to ${e.message}")
 
@@ -118,12 +125,13 @@ class MainActivity : AppCompatActivity() {
         catch (e: Exception){
 
             progressDialog.dismiss()
+            // Exception while preparing InputImage show reason in toast
             showToast("Failed to prepare image due to ${e.message}")
         }
     }
 
     private fun showInputImageDialog() {
-
+        // init PopupMenu
         val popupMenu = PopupMenu(this, inputImageBtn)
 
         popupMenu.menu.add(Menu.NONE, 1, 1, "CAMERA")
@@ -164,25 +172,27 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun pickImageGallery(){
-
+        // intent to pick image from gallery
         val intent = Intent(Intent.ACTION_PICK)
+        // set the type of file
         intent.type = "image/*"
         galleryActivityResultLauncher.launch(intent)
     }
 
     private val  galleryActivityResultLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()){result->
-
+            // here we will recive the image
             if (result.resultCode == Activity.RESULT_OK){
-
+                // image picked
                 val data = result.data
                 imageUri = data!!.data
 
+                // set to imageView
                 imageIv.setImageURI(imageUri)
 
             }
             else{
-
+                //cancelled
                 showToast("Cancelled....!")
 
             }
@@ -190,13 +200,14 @@ class MainActivity : AppCompatActivity() {
 
 
     private fun pickImageCamera(){
+        //get the image data to store in media store
         val values = ContentValues()
         values.put(MediaStore.Images.Media.TITLE, "Sample Title")
         values.put(MediaStore.Images.Media.DESCRIPTION, "Sample Description")
 
 
         imageUri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
-
+        // intent to launch the camera
         val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
         intent.putExtra(MediaStore.EXTRA_OUTPUT, imageUri)
         cameraActivityResultLauncher.launch(intent)
@@ -205,25 +216,29 @@ class MainActivity : AppCompatActivity() {
 
     private val cameraActivityResultLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()){result ->
-
+            // here we get the image from camera
             if (result.resultCode == Activity.RESULT_OK){
 
                 imageIv.setImageURI(imageUri)
             }
             else{
-
+                //cancelled
                 showToast("Cancelled....")
 
             }
 
         }
 
-    private fun checkStoragePermission() : Boolean{
 
+
+
+    private fun checkStoragePermission() : Boolean{
+        // checks storage permission returns true or false
         return ContextCompat.checkSelfPermission(this, android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
     }
 
     private fun checkCameraPermissions() : Boolean{
+        //checks camera permissions return true or false
         val cameraResult = ContextCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
         val storageResult = ContextCompat.checkSelfPermission(this, android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
 
@@ -245,6 +260,7 @@ class MainActivity : AppCompatActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        // handle permissions result
         when(requestCode){
             CAMERA_REQUEST_CODE ->{
 
@@ -257,7 +273,7 @@ class MainActivity : AppCompatActivity() {
                         pickImageCamera()
                     }
                     else{
-                        showToast("Permissions not granted..")
+                        showToast("Permissions missing, check your settings")
                     }
                 }
 
@@ -270,7 +286,7 @@ class MainActivity : AppCompatActivity() {
                         pickImageGallery()
                     }
                     else{
-                        showToast("Permission missing")
+                        showToast("Permission missing, check your settings")
                     }
                 }
             }
@@ -282,8 +298,30 @@ class MainActivity : AppCompatActivity() {
 
 
 
-
     private fun showToast(message: String){
         Toast.makeText(this,message, Toast.LENGTH_SHORT).show()
     }
-}
+    /*private val cropImage = registerForActivityResult(CropImageContract()) { result ->
+        if (result.isSuccessful) {
+            // Use the returned uri.
+            val uriContent = result.uriContent
+            val uriFilePath = result.getUriFilePath(context) // optional usage
+        } else {
+            // An error occurred.
+            val exception = result.error
+        }
+    }
+
+    private fun startCrop() {
+        // Start picker to get image for cropping and then use the image in cropping activity.
+        cropImage.launch(
+            options {
+                setGuidelines(CropImageView.Guidelines.ON)
+            }
+        )
+
+
+    }
+
+
+*/}
