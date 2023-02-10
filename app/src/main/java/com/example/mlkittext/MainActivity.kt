@@ -322,6 +322,6 @@ class MainActivity : AppCompatActivity() {
 
 
     }
-
+    https://github.com/CanHub/Android-Image-Cropper
 
 */}
