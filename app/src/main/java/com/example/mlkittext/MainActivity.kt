@@ -31,6 +31,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var recognizeTextBtn: MaterialButton
     private lateinit var imageIv: ImageView
     private lateinit var recognizedTextEt: EditText
+    private lateinit var toCameraButton: MaterialButton
 
     private companion object{
         private const val CAMERA_REQUEST_CODE =100
@@ -61,6 +62,7 @@ class MainActivity : AppCompatActivity() {
         recognizeTextBtn = findViewById(R.id.recognizeTextBtn)
         imageIv = findViewById(R.id.imageIv)
         recognizedTextEt = findViewById(R.id.recognizeTextEt)
+        toCameraButton = findViewById(R.id.toCameraButton)
 
         cameraPermissions = arrayOf(android.Manifest.permission.CAMERA, android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
         storagePermissions = arrayOf(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
@@ -85,7 +87,17 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        toCameraButton.setOnClickListener() {
+            val intent = Intent(this, CameraClass::class.java)
+            startActivity(intent)
+        }
+
     }
+
+    private fun toCameraActivity() {
+
+    }
+
 
     private fun recognizeTextfromImage() {
         progressDialog.setMessage("Preparing Image...")
